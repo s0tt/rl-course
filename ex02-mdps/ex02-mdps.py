@@ -1,8 +1,15 @@
 import gym
 import numpy as np
+import itertools
+
+#Actions: (0-left 1-down 2-right 3-up).
+np.set_printoptions(precision=3)
 
 # Init environment
 # Lets use a smaller 3x3 custom map for faster computations
+#States: (0, 1, 2
+#         3, 4, 5,
+#         6, 7, 8
 custom_map3x3 = [
     'SFF',
     'FFF',
@@ -22,7 +29,7 @@ n_actions = env.action_space.n
 
 r = np.zeros(n_states) # the r vector is zero everywhere except for the goal state (last state)
 r[-1] = 1.
-
+print("r: ", r)
 gamma = 0.8
 
 
@@ -50,7 +57,8 @@ def value_policy(policy):
     P = trans_matrix_for_policy(policy)
     # TODO: calculate and return v
     # (P, r and gamma already given)
-    return None
+    v = np.linalg.inv(np.identity(P.shape[0]) - gamma * P).dot(r)
+    return v
 
 
 def bruteforce_policies():
@@ -61,6 +69,24 @@ def bruteforce_policies():
     optimalvalue = np.zeros(n_states)
     
     # TODO: implement code that tries all possible policies, calculate the values using def value_policy. Find the optimal values and the optimal policies to answer the exercise questions.
+    policies = np.array([x for x in itertools.product(*[np.arange(n_actions) for _ in range(n_states-len(terms))])])
+    vals = []
+
+    # add terminal state zero actions
+    for states in terms:
+        policies = np.insert(policies, states, [0], axis=1)
+    #policies = np.insert(policies, terms[0], np.zeros((len(terms))), axis=1)
+
+    #calculate all policy values and optimalvalue
+    for val in range(policies.shape[0]):
+        v = value_policy(policies[val, :])
+        optimalvalue = np.maximum(optimalvalue, v)
+        vals.append(v)
+
+    #extract optimal policies that score the max value
+    for val in range(policies.shape[0]):
+        if (np.equal(vals[val], optimalvalue)).all():
+            optimalpolicies.append(policies[val, :])
 
     print ("Optimal value function:")
     print(optimalvalue)
@@ -83,16 +109,19 @@ def main():
     policy_right = np.ones(n_states, dtype=np.int) * 2  # 2 for all states
 
     # Value functions:
-    print("Value function for policy_left (always going left):")
+    print("\nP transition for policy_right (always going right):")
+    print (trans_matrix_for_policy(policy_right))
+
+    print("\nValue function for policy_left (always going left):")
     print (value_policy(policy_left))
-    print("Value function for policy_right (always going right):")
+
+    print("\nValue function for policy_right (always going right):")
     print (value_policy(policy_right))
 
     optimalpolicies = bruteforce_policies()
 
 
     # This code can be used to "rollout" a policy in the environment:
-    """
     print ("rollout policy:")
     maxiter = 100
     state = env.reset()
@@ -102,7 +131,7 @@ def main():
         state=new_state
         if done:
             print ("Finished episode")
-            break"""
+            break
 
 
 if __name__ == "__main__":

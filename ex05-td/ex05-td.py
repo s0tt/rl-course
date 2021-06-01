@@ -84,39 +84,79 @@ def plot_Q(Q, env):
 
     plt.xticks([])
     plt.yticks([])
+    plt.title("Plot Q")
 
 
-def sarsa(env, alpha=0.1, gamma=0.9, epsilon=0.1, num_ep=int(1e4)):
+def sarsa(env, alpha=0.1, gamma=0.9, epsilon=0.3, num_ep=int(3e4)):
     Q = np.zeros((env.observation_space.n,  env.action_space.n))
+    len_list = []
+    avg_len_list = []
+    for i in range(num_ep):
+        s = env.reset()
+        done = False
+        len = 0
+        #a = np.random.randint(env.action_space.n)
+        #s, r, done, _ = env.step(a)
+        if np.random.rand() < epsilon: 
+            #explore
+            a = np.random.randint(env.action_space.n)
+        else:
+            #exploit
+            a = np.argmax(Q[s, :])
+        while not done:
+            s_, r, done, _ = env.step(a)
+            if np.random.rand() < epsilon: 
+                #explore
+                a_ = np.random.randint(env.action_space.n)
+            else:
+                #exploit
+                a_ = np.argmax(Q[s_, :])
+            #s_, r, done, _ = env.step(a_)
+            Q[s,a] = Q[s,a] + alpha*(r + gamma*Q[s_,a_] - Q[s,a])
+            s = s_
+            a = a_
+            len +=1
 
-    # TODO: implement the sarsa algorithm
 
-    # This is some starting point performing random walks in the environment:
+        len_list.append(len)
+        avg_len_list.append(np.mean(len_list))
+    
+    plt.plot(avg_len_list)
+
+
+    return Q
+
+
+def qlearning(env, alpha=0.1, gamma=0.9, epsilon=0.3, num_ep=int(3e4)):
+    Q = np.zeros((env.observation_space.n,  env.action_space.n))
+    # TODO: implement the qlearning algorithm
     for i in range(num_ep):
         s = env.reset()
         done = False
         while not done:
-            a = np.random.randint(env.action_space.n)
+            if np.random.rand() < epsilon: 
+                #explore
+                a = np.random.randint(env.action_space.n)
+            else:
+                #exploit
+                a = np.argmax(Q[s, :])
             s_, r, done, _ = env.step(a)
+            Q[s,a] = Q[s,a] + alpha*(r + gamma*np.amax(Q[s_,:]) - Q[s,a])
+            s = s_
     return Q
 
 
-def qlearning(env, alpha=0.1, gamma=0.9, epsilon=0.1, num_ep=int(1e4)):
-    Q = np.zeros((env.observation_space.n,  env.action_space.n))
-    # TODO: implement the qlearning algorithm
-    return Q
-
-
-env=gym.make('FrozenLake-v0')
+#env=gym.make('FrozenLake-v0')
 #env=gym.make('FrozenLake-v0', is_slippery=False)
-#env=gym.make('FrozenLake-v0', map_name="8x8")
+env=gym.make('FrozenLake-v0', map_name="8x8")
+np.random.seed(1)
 
 print("Running sarsa...")
 Q = sarsa(env)
 plot_V(Q, env)
 plot_Q(Q, env)
 print_policy(Q, env)
-plt.show()
+plt.show()#
 
 print("Running qlearning")
 Q = qlearning(env)
