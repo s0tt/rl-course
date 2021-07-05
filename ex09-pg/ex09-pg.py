@@ -5,7 +5,8 @@ import matplotlib.pyplot as plt
 
 def policy(state, theta):
     """ TODO: return probabilities for actions under softmax action selection """
-    return [0.5, 0.5]  # both actions with 0.5 probability => random
+    h = state @ theta
+    return np.exp(h)/np.sum(np.exp(h))
 
 
 def generate_episode(env, theta, display=False):
@@ -30,27 +31,50 @@ def generate_episode(env, theta, display=False):
     return states, rewards, actions
 
 
-def REINFORCE(env):
+def REINFORCE(env, gamma=0.99, alpha=0.05):
     theta = np.random.rand(4, 2)  # policy parameters
+    ep_len_list = []
+    mean_ep_len = []
 
-    for e in range(10000):
+    for e in range(1000):
         if e % 300 == 0:
-            states, rewards, actions = generate_episode(env, theta, True)  # display the policy every 300 episodes
+            states, rewards, actions = generate_episode(env, theta, False)  # display the policy every 300 episodes
         else:
             states, rewards, actions = generate_episode(env, theta, False)
 
-        print("episode: " + str(e) + " length: " + str(len(states)))
+        
         # TODO: keep track of previous 100 episode lengths and compute mean
+        if len(ep_len_list) >= 100:
+            ep_len_list.pop(0) #remove last item
+        ep_len_list.append(len(states))
+        mean = sum(ep_len_list) / len(ep_len_list)
+        mean_ep_len.append(mean)
+
+        print("episode:\t" + str(e) + " length:\t" + str(len(states)) + " mean len:\t" + str(mean))
 
         # TODO: implement the reinforce algorithm to improve the policy weights
-
+        nr_steps = len(states)
+        G = np.zeros([nr_steps])
+        for t in range(nr_steps):
+            for k in range(t+1,nr_steps+1):
+                G[t] += (gamma**(k-t-1)) * rewards[k-1]
+            action = actions[t]
+            theta[:,action] = theta[:,action] + alpha * (gamma**t) * G[t] * (states[t] * (1 - policy(states[t], theta)[action]))
+    return mean_ep_len
 
 
 
 
 def main():
     env = gym.make('CartPole-v1')
-    REINFORCE(env)
+    mean_ep_len = REINFORCE(env)
+    plt.plot(mean_ep_len)
+    plt.title("Mean Ep length over time")
+    plt.xlabel("Episodes")
+    plt.ylabel("Mean Episode Length")
+    plt.legend()
+    plt.savefig('ex09' + '.png')
+    plt.show()
     env.close()
 
 
